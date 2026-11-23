@@ -230,3 +230,12 @@ A：`SessionManager` 为每个 UUID 会话创建独立的 `SearchService` 实例
 ## License
 
 MIT License — 详见 [LICENSE](LICENSE) 文件。本项目仅供学习交流使用，商用请遵守博查 API 和 DeepSeek API 的各自条款。
+
+## 相关项目
+
+同作者的另一个 LangGraph + FastAPI 项目：
+- [domain-agent](https://github.com/yyh9527J/domain-agent) — 数据与文档智能助手，意图路由到只读 SQL / 文档 RAG / 闲聊，回答附行号出处。领域配置化，换业务域不改代码。
+
+## 作者
+
+[yyh9527J · GitHub](https://github.com/yyh9527J)
