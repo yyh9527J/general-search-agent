@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>General Search Agent</title>
+  <style>
+    :root {
+      --bg: #f5faff;
+      --panel: #ffffff;
+      --text: #243b53;
+      --muted: #7b95ab;
+      --line: #e1edf6;
+      --soft: #edf6fc;
+      --accent: #75b9e5;
+      --accent-strong: #559fd0;
+      --accent-text: #347aa8;
+      --accent-soft: #e5f3fc;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, textarea { font: inherit; }
+    .app { display: flex; height: 100vh; overflow: hidden; }
+
+    /* ---------- 侧边栏 ---------- */
+    .sidebar {
+      width: 236px;
+      flex: none;
+      background: var(--panel);
+      border-right: 1px solid var(--line);
+      padding: 14px 12px 12px;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 2px 6px 12px;
+      color: #315672;
+    }
+
+    .brand-mark {
+      width: 24px;
+      height: 24px;
+      border-radius: 7px;
+      background: var(--accent-soft);
+      border: 1px solid #cee7f8;
+      color: var(--accent-text);
+      font-size: 9px;
+      letter-spacing: .3px;
+      display: grid;
+      place-items: center;
+    }
+
+    .new-chat {
+      width: 100%;
+      border: 1px solid #d5e8f5;
+      background: #fff;
+      border-radius: 999px;
+      padding: 9px 12px;
+      text-align: left;
+      font-size: 13px;
+      color: #426b88;
+      cursor: pointer;
+      transition: background .15s ease, border-color .15s ease;
+    }
+
+    .new-chat:hover { background: #eff8fd; border-color: #bcdcf1; }
+
+    .nav-label {
+      font-size: 11px;
+      color: #91a9bc;
+      margin: 16px 8px 6px;
+      letter-spacing: .2px;
+    }
+
+    .project-item {
+      font-size: 12.5px;
+      color: #4c718b;
+      background: #f0f8fd;
+      border: 1px solid #e7f3fa;
+      border-radius: 8px;
+      padding: 7px 9px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .history {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      padding-bottom: 8px;
+    }
+
+    .history-empty { font-size: 12px; color: #a0b5c5; padding: 6px 9px; }
+
+    .history-item {
+      border: 0;
+      background: transparent;
+      text-align: left;
+      font-size: 12.5px;
+      color: #58768c;
+      padding: 8px 9px;
+      border-radius: 8px;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .history-item:hover { background: #f0f8fd; }
+    .history-item.active { background: #e3f1fa; color: #347aa8; font-weight: 500; }
+
+    .sidebar-footer {
+      border-top: 1px solid var(--line);
+      padding: 10px 8px 2px;
+      font-size: 11px;
+      color: #91a9bc;
+      line-height: 1.6;
+    }
+
+    /* ---------- 主区域 ---------- */
+    .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+    .topbar {
+      min-height: 52px;
+      flex: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 7px 20px;
+      border-bottom: 1px solid #e5f0f7;
+      background: rgba(245, 250, 255, .9);
+      backdrop-filter: blur(8px);
+    }
+
+    .domain-badge {
+      font-size: 12px;
+      color: #4d7b9a;
+      background: #fff;
+      border: 1px solid #d8eaf6;
+      border-radius: 999px;
+      padding: 5px 11px;
+      white-space: nowrap;
+    }
+
+    .ghost {
+      border: 0;
+      background: transparent;
+      color: #7594aa;
+      font-size: 12px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .ghost:hover { background: #e8f4fb; color: #347aa8; }
+    .ghost[hidden] { display: none; }
+    .top-actions { display: flex; align-items: center; gap: 2px; }
+    .download-link { color: #428ab8; }
+    .mobile-new { display: none; }
+
+    .conversation {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 28px 20px 8px;
+      scroll-behavior: smooth;
+    }
+
+    .welcome {
+      width: 100%;
+      max-width: 760px;
+      margin: auto;
+      padding: 4vh 0 24px;
+      text-align: center;
+    }
+
+    .welcome-icon {
+      width: 46px;
+      height: 46px;
+      margin: 0 auto 16px;
+      border-radius: 15px;
+      display: grid;
+      place-items: center;
+      color: #4d9bcf;
+      background: #e4f3fc;
+      border: 1px solid #d2eafa;
+    }
+
+    .welcome h1 { font-size: 28px; font-weight: 600; letter-spacing: -.3px; margin: 0 0 10px; }
+    .welcome .sub { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.8; }
+
+    .messages {
+      width: 100%;
+      max-width: 760px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      padding-bottom: 20px;
+    }
+
+    .msg { display: flex; flex-direction: column; }
+    .msg.user { align-items: flex-end; }
+    .msg.agent { align-items: flex-start; }
+
+    .bubble {
+      font-size: 14px;
+      line-height: 1.75;
+      padding: 12px 16px;
+      border-radius: 16px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .user .bubble {
+      background: var(--accent);
+      color: #fff;
+      border-bottom-right-radius: 6px;
+      max-width: 78%;
+      box-shadow: 0 3px 10px rgba(80, 153, 199, .1);
+    }
+
+    .agent .bubble {
+      background: #fff;
+      border: 1px solid var(--line);
+      color: #2c465c;
+      border-bottom-left-radius: 6px;
+      max-width: 88%;
+      box-shadow: 0 3px 12px rgba(80, 137, 175, .035);
+    }
+
+    .meta {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 7px;
+      font-size: 11px;
+      color: #8ba5b8;
+    }
+
+    .chip {
+      background: #eaf5fc;
+      border-radius: 999px;
+      padding: 2px 8px;
+      color: #6289a4;
+    }
+
+    .file-chip {
+      background: #e1f1fb;
+      border: 1px solid #d0e8f7;
+      border-radius: 999px;
+      padding: 2px 8px;
+      color: #3d87b5;
+      text-decoration: none;
+    }
+
+    .file-chip:hover { background: #d2eafa; }
+
+    .typing .bubble { display: flex; align-items: center; gap: 4px; padding: 15px 16px; }
+
+    .dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #8ec6e8;
+      animation: blink 1.2s infinite ease-in-out;
+    }
+
+    .dot:nth-child(2) { animation-delay: .18s; }
+    .dot:nth-child(3) { animation-delay: .36s; }
+
+    @keyframes blink {
+      0%, 80%, 100% { opacity: .25; transform: translateY(0); }
+      40% { opacity: 1; transform: translateY(-2px); }
+    }
+
+    /* ---------- 输入区 ---------- */
+    .composer-area {
+      flex: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 20px 16px;
+    }
+
+    .composer {
+      width: 100%;
+      max-width: 760px;
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      background: #fff;
+      border: 1px solid #d7e8f3;
+      border-radius: 26px;
+      padding: 7px 7px 7px 14px;
+      box-shadow: 0 6px 20px rgba(71, 137, 179, .07);
+      transition: border-color .15s ease, box-shadow .15s ease;
+    }
+
+    .composer:focus-within {
+      border-color: #9bcce9;
+      box-shadow: 0 8px 24px rgba(71, 137, 179, .12);
+    }
+
+    #input {
+      flex: 1;
+      border: 0;
+      outline: 0;
+      resize: none;
+      background: transparent;
+      padding: 8px 0;
+      font-size: 14px;
+      line-height: 1.5;
+      max-height: 160px;
+      color: var(--text);
+    }
+
+    #input::placeholder { color: #9db2c2; }
+
+    .send {
+      width: 36px;
+      height: 36px;
+      flex: none;
+      border: 0;
+      border-radius: 50%;
+      background: var(--accent-strong);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transition: background .15s ease;
+    }
+
+    .send:hover { background: #438fbe; }
+    .send:disabled { background: #c6dce9; cursor: not-allowed; }
+    .hint { margin: 0; font-size: 11px; color: #93aabc; }
+
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: #d4e6f1; border-radius: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+
+    @media (max-width: 820px) {
+      .sidebar { display: none; }
+      .mobile-new { display: inline-block; }
+      .topbar { padding: 7px 12px; }
+      .download-link { display: none; }
+      .conversation { padding: 18px 14px 4px; }
+      .welcome h1 { font-size: 23px; }
+      .composer-area { padding: 8px 12px 12px; }
+      .hint { display: none; }
+      .user .bubble { max-width: 88%; }
+      .agent .bubble { max-width: 94%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-mark">GS</span>
+        <span>General Search Agent</span>
+      </div>
+      <button class="new-chat" id="newChat" type="button">＋ 新建对话</button>
+
+      <div class="nav-label">项目</div>
+      <div class="project-item">网页搜索与 CSV 分析</div>
+
+      <div class="nav-label">聊天</div>
+      <nav class="history" id="history"></nav>
+
+      <div class="sidebar-footer">确认后搜索 · 来源可追溯<br />结果明细与通用统计导出</div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <span class="domain-badge">通用搜索助手</span>
+        <div class="top-actions">
+          <a class="ghost download-link" id="downloadResults" hidden>结果 CSV</a>
+          <a class="ghost download-link" id="downloadAnalysis" hidden>分析 CSV</a>
+          <button class="ghost mobile-new" id="mobileNewChat" type="button">＋ 新对话</button>
+          <button class="ghost" id="clearChat" type="button">清空对话</button>
+        </div>
+      </header>
+
+      <section class="conversation" id="conversation">
+        <div class="welcome" id="welcome">
+          <div class="welcome-icon">
+            <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" stroke-width="1.7" />
+              <path d="M15.5 15.5L21 21" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+            </svg>
+          </div>
+          <h1>想搜索什么？</h1>
+          <p class="sub">招聘、商品或其他公开网页都可以搜索并保存。<br />给我关键词，或描述背景和需求；需要推断查询词时会先请你确认。</p>
+        </div>
+        <div class="messages" id="messages"></div>
+      </section>
+
+      <div class="composer-area">
+        <form class="composer" id="composer">
+          <textarea id="input" rows="1" placeholder="例如：搜索 Python 招聘、降噪耳机，或描述你的需求…"></textarea>
+          <button class="send" id="send" type="submit" aria-label="发送">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M8 12.5V3.5M8 3.5L4 7.5M8 3.5L12 7.5" stroke="currentColor"
+                    stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+        </form>
+        <p class="hint">Enter 发送，Shift + Enter 换行 · 确认后才搜索，结果可下载 CSV</p>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const STORE_KEY = "general-search-agent:sessions";
+    const ACTION_LABELS = {
+      search: "已完成搜索",
+      needs_confirmation: "等待确认",
+      cancel: "已取消",
+      no_pending: "无待确认搜索",
+      chat: "对话",
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const state = {
+      sessionId: null,
+      messages: [],
+      sessions: [],
+      files: [],
+      busy: false,
+    };
+
+    function scrollToBottom() {
+      const box = $("conversation");
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function autoResize() {
+      const input = $("input");
+      input.style.height = "auto";
+      input.style.height = Math.min(input.scrollHeight, 160) + "px";
+    }
+
+    function setBusy(busy) {
+      state.busy = busy;
+      $("send").disabled = busy;
+    }
+
+    function updateDownloads() {
+      const results = state.files.find((file) => file.name === "results.csv");
+      const analysis = state.files.find((file) => file.name === "analysis.csv");
+      $("downloadResults").hidden = !results;
+      $("downloadAnalysis").hidden = !analysis;
+      if (results) $("downloadResults").href = results.url;
+      if (analysis) $("downloadAnalysis").href = analysis.url;
+    }
+
+    function metaNode(meta) {
+      const wrap = document.createElement("div");
+      wrap.className = "meta";
+
+      if (meta.action) {
+        const action = document.createElement("span");
+        action.className = "chip";
+        action.textContent = ACTION_LABELS[meta.action] || meta.action;
+        wrap.appendChild(action);
+      }
+
+      const pending = meta.pending_search || {};
+      if (pending.query) {
+        const condition = document.createElement("span");
+        condition.className = "chip";
+        const categoryLabels = { jobs: "招聘", products: "商品", general: "网页" };
+        condition.textContent = "条件：" + pending.query + " / " +
+          (categoryLabels[pending.category] || "网页") + " / " + pending.limit + " 条";
+        wrap.appendChild(condition);
+      }
+
+      if (meta.latency_ms) {
+        const latency = document.createElement("span");
+        latency.textContent = (meta.latency_ms / 1000).toFixed(1) + "s";
+        wrap.appendChild(latency);
+      }
+
+      (meta.files || []).forEach((file) => {
+        const link = document.createElement("a");
+        link.className = "file-chip";
+        link.href = file.url;
+        link.setAttribute("download", file.name);
+        link.textContent = "下载 " + file.name;
+        wrap.appendChild(link);
+      });
+      return wrap;
+    }
+
+    function renderMessages() {
+      const box = $("messages");
+      box.innerHTML = "";
+
+      state.messages.forEach((message) => {
+        const row = document.createElement("div");
+        row.className = "msg " + message.role;
+        const bubble = document.createElement("div");
+        bubble.className = "bubble";
+        bubble.textContent = message.content;
+        row.appendChild(bubble);
+        if (message.meta) row.appendChild(metaNode(message.meta));
+        box.appendChild(row);
+      });
+
+      $("welcome").style.display = state.messages.length ? "none" : "block";
+      updateDownloads();
+      scrollToBottom();
+    }
+
+    function addMessage(role, content, meta) {
+      state.messages.push({ role, content, meta: meta || null });
+      renderMessages();
+      persistCurrent();
+    }
+
+    function showTyping() {
+      removeTyping();
+      const row = document.createElement("div");
+      row.className = "msg agent typing";
+      row.id = "typing";
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      for (let i = 0; i < 3; i += 1) {
+        const dot = document.createElement("span");
+        dot.className = "dot";
+        bubble.appendChild(dot);
+      }
+      row.appendChild(bubble);
+      $("messages").appendChild(row);
+      $("welcome").style.display = "none";
+      scrollToBottom();
+    }
+
+    function removeTyping() {
+      const node = $("typing");
+      if (node) node.remove();
+    }
+
+    function loadSessions() {
+      try {
+        state.sessions = JSON.parse(localStorage.getItem(STORE_KEY) || "[]");
+        if (!Array.isArray(state.sessions)) state.sessions = [];
+      } catch (error) {
+        state.sessions = [];
+      }
+    }
+
+    function saveSessions() {
+      try {
+        localStorage.setItem(STORE_KEY, JSON.stringify(state.sessions));
+      } catch (error) {
+        /* 本地存储不可用时只保留当前会话 */
+      }
+    }
+
+    function firstLine(messages) {
+      const user = messages.find((item) => item.role === "user");
+      const text = (user && user.content) || "新对话";
+      return text.length > 26 ? text.slice(0, 26) + "…" : text;
+    }
+
+    function persistCurrent() {
+      if (!state.sessionId) return;
+      let session = state.sessions.find((item) => item.id === state.sessionId);
+      if (!session) session = { id: state.sessionId, title: "新对话", messages: [] };
+      session.messages = state.messages.slice();
+      session.title = firstLine(state.messages);
+      session.files = state.files.slice();
+      session.updated = Date.now();
+      state.sessions = [session, ...state.sessions.filter((item) => item.id !== session.id)];
+      state.sessions = state.sessions.slice(0, 20);
+      saveSessions();
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const box = $("history");
+      box.innerHTML = "";
+      if (!state.sessions.length) {
+        const empty = document.createElement("div");
+        empty.className = "history-empty";
+        empty.textContent = "还没有对话";
+        box.appendChild(empty);
+        return;
+      }
+      state.sessions.forEach((session) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "history-item" + (session.id === state.sessionId ? " active" : "");
+        button.textContent = session.title || "新对话";
+        button.title = session.title || "新对话";
+        button.addEventListener("click", () => openSession(session));
+        box.appendChild(button);
+      });
+    }
+
+    function openSession(session) {
+      if (state.busy) return;
+      state.sessionId = session.id;
+      state.messages = (session.messages || []).slice();
+      state.files = (session.files || []).slice();
+      renderMessages();
+      renderHistory();
+      $("input").focus();
+    }
+
+    function newChat() {
+      if (state.busy) return;
+      state.sessionId = null;
+      state.messages = [];
+      state.files = [];
+      renderMessages();
+      renderHistory();
+      $("input").focus();
+    }
+
+    async function clearChat() {
+      if (state.busy) return;
+      if (state.sessionId) {
+        try {
+          await fetch("/sessions/" + encodeURIComponent(state.sessionId), { method: "DELETE" });
+        } catch (error) {
+          /* 服务不可用时也要能清空本地记录 */
+        }
+        state.sessions = state.sessions.filter((item) => item.id !== state.sessionId);
+        saveSessions();
+      }
+      newChat();
+    }
+
+    async function submit() {
+      const input = $("input");
+      const text = input.value.trim();
+      if (!text || state.busy) return;
+
+      setBusy(true);
+      input.value = "";
+      autoResize();
+      addMessage("user", text);
+      showTyping();
+
+      try {
+        const response = await fetch("/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text, session_id: state.sessionId }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.detail || "请求失败：" + response.status);
+
+        state.sessionId = data.session_id;
+        state.files = data.files || [];
+        removeTyping();
+        addMessage("agent", data.answer || "（没有返回内容）", {
+          action: data.action,
+          pending_search: data.pending_search,
+          files: data.files || [],
+          latency_ms: data.latency_ms,
+        });
+      } catch (error) {
+        removeTyping();
+        addMessage("agent", "请求失败：" + error.message);
+      } finally {
+        setBusy(false);
+        input.focus();
+      }
+    }
+
+    $("composer").addEventListener("submit", (event) => {
+      event.preventDefault();
+      submit();
+    });
+
+    $("input").addEventListener("input", autoResize);
+    $("input").addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        submit();
+      }
+    });
+
+    $("newChat").addEventListener("click", newChat);
+    $("mobileNewChat").addEventListener("click", newChat);
+    $("clearChat").addEventListener("click", clearChat);
+
+    loadSessions();
+    renderHistory();
+    renderMessages();
+    $("input").focus();
+  </script>
+</body>
+</html>
